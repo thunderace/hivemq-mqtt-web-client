@@ -39,7 +39,7 @@ var websocketclient = {
         var lwMessage = $('#LWMInput').val();
         var ssl = $('#sslInput').is(':checked');
 
-        this.client = new Messaging.Client(host, port, clientId);
+        this.client = new Paho.MQTT.Client(host, port, clientId);
         this.client.onConnectionLost = this.onConnectionLost;
         this.client.onMessageArrived = this.onMessageArrived;
 
@@ -59,7 +59,7 @@ var websocketclient = {
             options.password = password;
         }
         if (lwTopic.length > 0) {
-            var willmsg = new Messaging.Message(lwMessage);
+            var willmsg = new Paho.MQTT.Message(lwMessage);
             willmsg.qos = lwQos;
             willmsg.destinationName = lwTopic;
             willmsg.retained = lwRetain;
@@ -107,7 +107,10 @@ var websocketclient = {
     },
 
     'onMessageArrived': function (message) {
-//        console.log("onMessageArrived:" + message.payloadString + " qos: " + message.qos);
+        if (message.payloadString == '') {
+            return;
+        }
+//      console.log("onMessageArrived:" + message.payloadString + " qos: " + message.qos);
 
         var subscription = websocketclient.getSubscriptionForTopic(message.destinationName);
 
@@ -121,8 +124,9 @@ var websocketclient = {
             'color': websocketclient.getColorForSubscription(subscription.id)
         };
 
-        console.log(messageObj);
+        //console.log(messageObj);
         messageObj.id = websocketclient.render.message(messageObj);
+        
         websocketclient.messages.push(messageObj);
     },
 
@@ -137,7 +141,7 @@ var websocketclient = {
             return false;
         }
 
-        var message = new Messaging.Message(payload);
+        var message = new Paho.MQTT.Message(payload);
         message.destinationName = topic;
         message.qos = qos;
         message.retained = retain;
@@ -185,12 +189,52 @@ var websocketclient = {
     'deleteSubscription': function (id) {
         var elem = $("#sub" + id);
 
-        if (confirm('Wirklich löschen ?')) {
+        if (confirm('Are you sure ?')) {
             elem.remove();
             this.unsubscribe(id);
         }
     },
+    'deleteRetainedMsg': function (id) {
+        if (confirm('Are you sure ?')) {
+            console.log(id);
+            var retainedMsg = _.find(websocketclient.messages, {'id': id});
+            console.log(retainedMsg);
+            
+            websocketclient.messages = _.filter(websocketclient.messages, function (item) {
+                return item.id != id;
+            });
 
+            var newEmptyRetaindMessage = new Paho.MQTT.Message("");
+            newEmptyRetaindMessage.destinationName = retainedMsg.topic;
+            newEmptyRetaindMessage.qos = 0;
+            newEmptyRetaindMessage.retained = true;
+
+            this.client.send(newEmptyRetaindMessage);
+
+            websocketclient.render.messages();
+        }
+
+    },
+    'doNotRetainMsg': function (id) {
+        if (confirm('Are you sure ?')) {
+            console.log(id);
+            var retainedMsg = _.find(websocketclient.messages, {'id': id});
+            console.log(retainedMsg);
+            websocketclient.messages = _.filter(websocketclient.messages, function (item) {
+                return item.id != id;
+            });
+
+            var newEmptyRetaindMessage = new Paho.MQTT.Message(retainedMsg.payload);
+            newEmptyRetaindMessage.destinationName = retainedMsg.topic;
+            newEmptyRetaindMessage.qos = 0;
+            newEmptyRetaindMessage.retained = false;
+
+            this.client.send(newEmptyRetaindMessage);
+
+            websocketclient.render.messages();
+        }
+
+    },
     'getRandomColor': function () {
         var r = (Math.round(Math.random() * 255)).toString(16);
         var g = (Math.round(Math.random() * 255)).toString(16);
@@ -245,23 +289,38 @@ var websocketclient = {
 
             websocketclient.render.clearMessages();
             _.forEach(websocketclient.messages, function (message) {
-                message.id = websocketclient.render.message(message);
+                /*message.id = */websocketclient.render.message(message);
             });
 
         },
         'message': function (message) {
-
-            var largest = websocketclient.lastMessageId++;
-
-            var html = '<li class="messLine id="' + largest + '">' +
+            var largest;
+            if (message.id) {
+                largest = message.id;
+            } else {
+                largest = websocketclient.lastMessageId++;
+            }
+            var html;
+            if (message.timestamp) {
+                html = '<li class="messLine id="' + largest + '">' +
                 '   <div class="row large-12 mess' + largest + '" style="border-left: solid 10px #' + message.color + '; ">' +
                 '       <div class="large-12 columns messageText">' +
-                '           <div class="large-3 columns date">' + message.timestamp.format("YYYY-MM-DD HH:mm:ss") + '</div>' +
+                '           <div class="large-3 columns date">' + message.timestamp.format("YYYY-MM-DD HH:mm:ss") + ' (' + largest + ')' + '</div>' +
                 '           <div class="large-5 columns topicM truncate" id="topicM' + largest + '" title="' + Encoder.htmlEncode(message.topic, 0) + '">Topic: ' + Encoder.htmlEncode(message.topic) + '</div>' +
                 '           <div class="large-2 columns qos">Qos: ' + message.qos + '</div>' +
                 '           <div class="large-2 columns retain">';
+            } else {
+                var now = Date.now();
+                html = '<li class="messLine id="' + largest + '">' +
+                '   <div class="row large-12 mess' + largest + '" style="border-left: solid 10px #' + message.color + '; ">' +
+                '       <div class="large-12 columns messageText">' +
+                '           <div class="large-3 columns date">' + now.toLocaleString() + ' (' + largest + ')' + '</div>' +
+                '           <div class="large-5 columns topicM truncate" id="topicM' + largest + '" title="' + Encoder.htmlEncode(message.topic, 0) + '">Topic: ' + Encoder.htmlEncode(message.topic) + '</div>' +
+                '           <div class="large-2 columns qos">Qos: ' + message.qos + '</div>' +
+                '           <div class="large-2 columns retain">';
+            }
             if (message.retained) {
-                html += 'Retained';
+                html += 'Retained <br><a href="#" onclick="websocketclient.deleteRetainedMsg(' + largest + '); return false;">Delete</a><br><a href="#" onclick="websocketclient.doNotRetainMsg(' + largest + '); return false;">Do not retain</a>';      
             }
             html += '           </div>' +
                 '           <div class="large-12 columns message break-words">' + Encoder.htmlEncode(message.payload) + '</div>' +

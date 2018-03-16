@@ -59,16 +59,19 @@
 }
 
 .publishTop {
+    margin-left: 15px;
     background-color: #f2f2f2;
-    width: 160px;
+    width: 180px;
 }
 
 .subTop {
+    margin-left: 15px;
     background-color: #f2f2f2;
-    width: 215px;
+    width: 180px;
 }
 
 .messagesTop {
+    margin-left: 15px;
     background-color: #f2f2f2;
     width: 180px;
 }
@@ -89,7 +92,7 @@ div.conniArrow, div.publishArrow, div.subArrow, div.messagesArrow {
 .publish {
 
     margin-top: 20px;
-    width: 60%;
+    width: 100%;
 }
 
 .disc li {
@@ -226,9 +229,10 @@ form.custom .custom.checkbox {
     margin-top: 10px;
 }
 
-#connection, #publish-sub {
+#connection, #publish, #sub, #messages {
     width: 100%;
 }
+
 
 .columns.subArrow, .columns.publishArrow, .columns.messagesArrow {
     padding-right: 0;
@@ -238,7 +242,7 @@ form.custom .custom.checkbox {
     margin-top: 15px;
 }
 
-#publishPanel {
+#publishPanel #subPanel #messagesPanel{
     padding-right: 0;
     padding-left: 0;
 }
