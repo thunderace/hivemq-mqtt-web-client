@@ -107,27 +107,49 @@ var websocketclient = {
     },
 
     'onMessageArrived': function (message) {
+        /*
         if (message.payloadString == '') {
             return;
         }
+        */
 //      console.log("onMessageArrived:" + message.payloadString + " qos: " + message.qos);
 
         var subscription = websocketclient.getSubscriptionForTopic(message.destinationName);
 
-        var messageObj = {
-            'topic': message.destinationName,
-            'retained': message.retained,
-            'qos': message.qos,
-            'payload': message.payloadString,
-            'timestamp': moment(),
-            'subscriptionId': subscription.id,
-            'color': websocketclient.getColorForSubscription(subscription.id)
-        };
+        // get the message with same topic in collection
+        var messageObj = _.find(websocketclient.messages, function (item) {
+            return item.topic == message.destinationName;
+        });
 
-        //console.log(messageObj);
-        messageObj.id = websocketclient.render.message(messageObj);
-        
-        websocketclient.messages.push(messageObj);
+        if (messageObj) {
+            // update
+            messageObj.timestamp = moment();
+            messageObj.qos = message.qos;
+            messageObj.payload = message.payloadString;
+            // update display 
+            $("#timestamp-"+ messageObj.id).html(messageObj.timestamp.format("YYYY-MM-DD HH:mm:ss") + ' (' + messageObj.id + ')');
+            $("#qos-"+ messageObj.id).html('Qos: ' + messageObj.qos);
+            $("#payload-"+ messageObj.id).html(Encoder.htmlEncode(messageObj.payload));
+            if (!messageObj.retained && message.retained) {
+                $("#retained-"+ messageObj.id).html('Retained <br><a href="#" onclick="websocketclient.deleteRetainedMsg(' + largest + '); return false;">Delete</a><br><a href="#" onclick="websocketclient.doNotRetainMsg(' + largest + '); return false;">Do not retain</a>');
+            }
+            if (messageObj.retained && !message.retained) {
+                $("#retained-"+ messageObj.id).html('Not <br>Retained');
+            }
+            messageObj.retained = message.retained;
+        } else {
+            messageObj = {
+                'topic': message.destinationName,
+                'retained': message.retained,
+                'qos': message.qos,
+                'payload': message.payloadString,
+                'timestamp': moment(),
+                'subscriptionId': subscription.id,
+                'color': websocketclient.getColorForSubscription(subscription.id)
+            };
+            messageObj.id = websocketclient.render.message(messageObj);
+            websocketclient.messages.push(messageObj);
+        }
     },
 
     'disconnect': function () {
@@ -196,10 +218,8 @@ var websocketclient = {
     },
     'deleteRetainedMsg': function (id) {
         if (confirm('Are you sure ?')) {
-            console.log(id);
             var retainedMsg = _.find(websocketclient.messages, {'id': id});
-            console.log(retainedMsg);
-            
+
             websocketclient.messages = _.filter(websocketclient.messages, function (item) {
                 return item.id != id;
             });
@@ -210,8 +230,7 @@ var websocketclient = {
             newEmptyRetaindMessage.retained = true;
 
             this.client.send(newEmptyRetaindMessage);
-
-            websocketclient.render.messages();
+            $("#message"+ retainedMsg.id).remove();
         }
 
     },
@@ -220,18 +239,12 @@ var websocketclient = {
             console.log(id);
             var retainedMsg = _.find(websocketclient.messages, {'id': id});
             console.log(retainedMsg);
-            websocketclient.messages = _.filter(websocketclient.messages, function (item) {
-                return item.id != id;
-            });
-
             var newEmptyRetaindMessage = new Paho.MQTT.Message(retainedMsg.payload);
             newEmptyRetaindMessage.destinationName = retainedMsg.topic;
-            newEmptyRetaindMessage.qos = 0;
+            newEmptyRetaindMessage.qos = retainedMsg.qos;
             newEmptyRetaindMessage.retained = false;
 
             this.client.send(newEmptyRetaindMessage);
-
-            websocketclient.render.messages();
         }
 
     },
@@ -289,7 +302,7 @@ var websocketclient = {
 
             websocketclient.render.clearMessages();
             _.forEach(websocketclient.messages, function (message) {
-                /*message.id = */websocketclient.render.message(message);
+                websocketclient.render.message(message);
             });
 
         },
@@ -301,29 +314,20 @@ var websocketclient = {
                 largest = websocketclient.lastMessageId++;
             }
             var html;
-            if (message.timestamp) {
-                html = '<li class="messLine id="' + largest + '">' +
-                '   <div class="row large-12 mess' + largest + '" style="border-left: solid 10px #' + message.color + '; ">' +
-                '       <div class="large-12 columns messageText">' +
-                '           <div class="large-3 columns date">' + message.timestamp.format("YYYY-MM-DD HH:mm:ss") + ' (' + largest + ')' + '</div>' +
-                '           <div class="large-5 columns topicM truncate" id="topicM' + largest + '" title="' + Encoder.htmlEncode(message.topic, 0) + '">Topic: ' + Encoder.htmlEncode(message.topic) + '</div>' +
-                '           <div class="large-2 columns qos">Qos: ' + message.qos + '</div>' +
-                '           <div class="large-2 columns retain">';
-            } else {
-                var now = Date.now();
-                html = '<li class="messLine id="' + largest + '">' +
-                '   <div class="row large-12 mess' + largest + '" style="border-left: solid 10px #' + message.color + '; ">' +
-                '       <div class="large-12 columns messageText">' +
-                '           <div class="large-3 columns date">' + now.toLocaleString() + ' (' + largest + ')' + '</div>' +
-                '           <div class="large-5 columns topicM truncate" id="topicM' + largest + '" title="' + Encoder.htmlEncode(message.topic, 0) + '">Topic: ' + Encoder.htmlEncode(message.topic) + '</div>' +
-                '           <div class="large-2 columns qos">Qos: ' + message.qos + '</div>' +
-                '           <div class="large-2 columns retain">';
-            }
+            html = '<li class="messLine" id="message' + largest + '">' +
+            '           <div class="row large-12 mess' + largest + '" style="border-left: solid 10px #' + message.color + '; ">' +
+            '               <div class="large-12 columns messageText">' +
+            '                   <div id="timestamp-'+ largest + '" class="large-3 columns date">' + message.timestamp.format("YYYY-MM-DD HH:mm:ss") + ' (' + largest + ')' + '</div>' +
+            '                   <div id="topic-'+ largest + '" class="large-5 columns topicM truncate" title="' + Encoder.htmlEncode(message.topic, 0) + '">Topic: ' + Encoder.htmlEncode(message.topic) + '</div>' +
+            '                   <div id="qos-'+ largest + '" class="large-2 columns qos">Qos: ' + message.qos + '</div>' +
+            '                   <div id="retained-'+ largest + '" class="large-2 columns retain">';
             if (message.retained) {
                 html += 'Retained <br><a href="#" onclick="websocketclient.deleteRetainedMsg(' + largest + '); return false;">Delete</a><br><a href="#" onclick="websocketclient.doNotRetainMsg(' + largest + '); return false;">Do not retain</a>';      
+            } else {
+                html += 'Not Retained<br>';      
             }
             html += '           </div>' +
-                '           <div class="large-12 columns message break-words">' + Encoder.htmlEncode(message.payload) + '</div>' +
+                '           <div id="payload-'+ largest + '" class="large-12 columns message break-words">' + Encoder.htmlEncode(message.payload) + '</div>' +
                 '       </div>' +
                 '   </div>' +
                 '</li>';
