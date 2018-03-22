@@ -52,31 +52,13 @@
     margin-top: 5px;
 }
 
-.conniTop {
+.conniTop, .subTop, .publishTop, .messagesTop, .deleteTop {
     margin-left: 15px;
     background-color: #f2f2f2;
     width: 180px;
 }
 
-.publishTop {
-    margin-left: 15px;
-    background-color: #f2f2f2;
-    width: 180px;
-}
-
-.subTop {
-    margin-left: 15px;
-    background-color: #f2f2f2;
-    width: 180px;
-}
-
-.messagesTop {
-    margin-left: 15px;
-    background-color: #f2f2f2;
-    width: 180px;
-}
-
-div.conniArrow, div.publishArrow, div.subArrow, div.messagesArrow {
+div.conniArrow, div.publishArrow, div.subArrow, div.messagesArrow, div.deleteArrow {
     float: right;
     text-align: right;
 }
@@ -89,8 +71,7 @@ div.conniArrow, div.publishArrow, div.subArrow, div.messagesArrow {
     margin-bot: 20px;
 }
 
-.publish {
-
+.publish .delete {
     margin-top: 20px;
     width: 100%;
 }
@@ -177,7 +158,7 @@ div.conniArrow, div.publishArrow, div.subArrow, div.messagesArrow {
     margin-top: 17px;
 }
 
-#publishButton {
+#publishButton, #deleteButton {
     margin-top: 17px;
     margin-left: -10px;
 }
@@ -229,12 +210,12 @@ form.custom .custom.checkbox {
     margin-top: 10px;
 }
 
-#connection, #publish, #sub, #messages {
+#connection, #publish, #sub, #messages, #delete {
     width: 100%;
 }
 
 
-.columns.subArrow, .columns.publishArrow, .columns.messagesArrow {
+.columns.subArrow, .columns.publishArrow, .columns.messagesArrow, columns.deleteArrow {
     padding-right: 0;
 }
 
@@ -242,7 +223,7 @@ form.custom .custom.checkbox {
     margin-top: 15px;
 }
 
-#publishPanel #subPanel #messagesPanel{
+#publishPanel, #subPanel, #messagesPanel, #deletePanel {
     padding-right: 0;
     padding-left: 0;
 }

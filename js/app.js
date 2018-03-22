@@ -131,7 +131,7 @@ var websocketclient = {
             $("#qos-"+ messageObj.id).html('Qos: ' + messageObj.qos);
             $("#payload-"+ messageObj.id).html(Encoder.htmlEncode(messageObj.payload));
             if (!messageObj.retained && message.retained) {
-                $("#retained-"+ messageObj.id).html('Retained <br><a href="#" onclick="websocketclient.deleteRetainedMsg(' + largest + '); return false;">Delete</a><br><a href="#" onclick="websocketclient.doNotRetainMsg(' + largest + '); return false;">Do not retain</a>');
+                $("#retained-"+ messageObj.id).html('Retained <br><a href="#" onclick="websocketclient.deleteRetainedMsg(' + largest + '); return false;">Delete</a>');
             }
             if (messageObj.retained && !message.retained) {
                 $("#retained-"+ messageObj.id).html('Not <br>Retained');
@@ -217,35 +217,13 @@ var websocketclient = {
         }
     },
     'deleteRetainedMsg': function (id) {
-        if (confirm('Are you sure ?')) {
-            var retainedMsg = _.find(websocketclient.messages, {'id': id});
+        var retainedMsg = _.find(websocketclient.messages, {'id': id});
 
-            websocketclient.messages = _.filter(websocketclient.messages, function (item) {
-                return item.id != id;
-            });
-
-            var newEmptyRetaindMessage = new Paho.MQTT.Message("");
-            newEmptyRetaindMessage.destinationName = retainedMsg.topic;
-            newEmptyRetaindMessage.qos = 0;
-            newEmptyRetaindMessage.retained = true;
-
-            this.client.send(newEmptyRetaindMessage);
-            $("#message"+ retainedMsg.id).remove();
-        }
-
-    },
-    'doNotRetainMsg': function (id) {
-        if (confirm('Are you sure ?')) {
-            console.log(id);
-            var retainedMsg = _.find(websocketclient.messages, {'id': id});
-            console.log(retainedMsg);
-            var newEmptyRetaindMessage = new Paho.MQTT.Message(retainedMsg.payload);
-            newEmptyRetaindMessage.destinationName = retainedMsg.topic;
-            newEmptyRetaindMessage.qos = retainedMsg.qos;
-            newEmptyRetaindMessage.retained = false;
-
-            this.client.send(newEmptyRetaindMessage);
-        }
+        websocketclient.messages = _.filter(websocketclient.messages, function (item) {
+            return item.id != id;
+        });
+        this.client.send(retainedMsg.topic, '', 2, true);
+        $("#message"+ retainedMsg.id).remove();
 
     },
     'getRandomColor': function () {
@@ -313,24 +291,25 @@ var websocketclient = {
             } else {
                 largest = websocketclient.lastMessageId++;
             }
-            var html;
-            html = '<li class="messLine" id="message' + largest + '">' +
+            var html = '<li class="messLine" id="message' + largest + '">' +
             '           <div class="row large-12 mess' + largest + '" style="border-left: solid 10px #' + message.color + '; ">' +
             '               <div class="large-12 columns messageText">' +
             '                   <div id="timestamp-'+ largest + '" class="large-3 columns date">' + message.timestamp.format("YYYY-MM-DD HH:mm:ss") + ' (' + largest + ')' + '</div>' +
-            '                   <div id="topic-'+ largest + '" class="large-5 columns topicM truncate" title="' + Encoder.htmlEncode(message.topic, 0) + '">Topic: ' + Encoder.htmlEncode(message.topic) + '</div>' +
+            '                   <div id="topic-'+ largest + '" class="large-7 columns topicM truncate" title="' + Encoder.htmlEncode(message.topic, 0) + '">Topic: ' + Encoder.htmlEncode(message.topic) + '</div>' +
             '                   <div id="qos-'+ largest + '" class="large-2 columns qos">Qos: ' + message.qos + '</div>' +
-            '                   <div id="retained-'+ largest + '" class="large-2 columns retain">';
+            '                   <div id="payload-'+ largest + '" class="large-12 columns message break-words">' + Encoder.htmlEncode(message.payload) + '</div>' +
+            '                   <div id="retained-'+ largest + '" class="large-12 columns retain">';
             if (message.retained) {
-                html += 'Retained <br><a href="#" onclick="websocketclient.deleteRetainedMsg(' + largest + '); return false;">Delete</a><br><a href="#" onclick="websocketclient.doNotRetainMsg(' + largest + '); return false;">Do not retain</a>';      
+                html += '                       Retained <a class="small button" onclick="websocketclient.deleteRetainedMsg(' + largest + '); return false;">Delete</a>';
             } else {
-                html += 'Not Retained<br>';      
+                html += '                       Not Retained';      
             }
-            html += '           </div>' +
-                '           <div id="payload-'+ largest + '" class="large-12 columns message break-words">' + Encoder.htmlEncode(message.payload) + '</div>' +
-                '       </div>' +
-                '   </div>' +
-                '</li>';
+            html += 
+            '                                <a id="editButton" class="small button" href="#editMsg">Edit</a>' +
+            '                   </div>' +
+            '               </div>' +
+            '           </div>' +
+            '           </li>';
             $("#messEdit").prepend(html);
             return largest;
         },
