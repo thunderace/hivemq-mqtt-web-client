@@ -121,11 +121,24 @@ var websocketclient = {
             return item.topic == message.destinationName;
         });
 
+        var payload;
+        if (message.destinationName.substr(message.destinationName.length - 10) == 'lastupdate') {
+            console.log('lastupdate');
+            var date = new Date(parseInt(message.payloadString, 10));
+            var hours = '0' + date.getHours();
+            var minutes = '0' + date.getMinutes();
+            var seconds = '0' + date.getSeconds();
+            var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            payload = date.toLocaleDateString('fr-FR', options) + ' ' + hours.substr(-2) + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+        } else {
+            payload = message.payloadString;
+        }
+        console.log(payload);
         if (messageObj) {
             // update
             messageObj.timestamp = moment();
             messageObj.qos = message.qos;
-            messageObj.payload = message.payloadString;
+            messageObj.payload = payload;
             // update display 
             $("#timestamp-"+ messageObj.id).html(messageObj.timestamp.format("YYYY-MM-DD HH:mm:ss") + ' (' + messageObj.id + ')');
             $("#qos-"+ messageObj.id).html('Qos: ' + messageObj.qos);
@@ -142,7 +155,7 @@ var websocketclient = {
                 'topic': message.destinationName,
                 'retained': message.retained,
                 'qos': message.qos,
-                'payload': message.payloadString,
+                'payload': payload,
                 'timestamp': moment(),
                 'subscriptionId': subscription.id,
                 'color': websocketclient.getColorForSubscription(subscription.id)
