@@ -122,7 +122,7 @@ var websocketclient = {
         });
 
         var payload;
-        if (message.destinationName.substr(message.destinationName.length - 10) == 'lastupdate') {
+        if (message.destinationName.substr(message.destinationName.length - 10) == 'lastupdate' && message.payloadString != '') {
             console.log('lastupdate');
             var date = new Date(parseInt(message.payloadString, 10));
             var hours = '0' + date.getHours();
