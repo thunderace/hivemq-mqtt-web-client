@@ -3,6 +3,8 @@ hivemq-mqtt-web-client
 
 ## A websockets based MQTT Client for your browser.
 
+Configuration : copy config-example.js to config.js, set entries of config.js and go
+
 This client runs on any modern browser, which supports websockets (sorry Internet Explorer <10!).
 You can use it to publish and subscribe at the same time.
 
